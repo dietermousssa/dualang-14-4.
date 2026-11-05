@@ -1,1 +1,54 @@
-.github/workflows/compiler-dualang-15.yml
+
+name: DuaLang 15 - Compiler ZIP en APK
+
+on:
+  workflow_dispatch:
+  push:
+    paths:
+      - 'DuaLang_15_PROJET_COMPLET.zip'
+      - '.github/workflows/compiler-dualang-15.yml'
+
+permissions:
+  contents: read
+
+jobs:
+  construire:
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+    steps:
+      - name: Telecharger fichiers du depot
+        uses: actions/checkout@v4
+      - name: Decompresser le projet DuaLang 15
+        shell: bash
+        run: |
+          test -s DuaLang_15_PROJET_COMPLET.zip
+          mkdir -p unpacked
+          unzip -q DuaLang_15_PROJET_COMPLET.zip -d unpacked
+          test -f unpacked/DuaLang_15_PROJET_COMPLET/app/build.gradle
+          test -f unpacked/DuaLang_15_PROJET_COMPLET/scripts/verify_project.py
+      - name: Installer Java 17
+        uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: '17'
+      - name: Installer Gradle 8.7
+        uses: gradle/actions/setup-gradle@v4
+        with:
+          gradle-version: '8.7'
+      - name: Installer Android SDK
+        uses: android-actions/setup-android@v3
+      - name: Installer API Android 35
+        run: sdkmanager "platforms;android-35" "build-tools;35.0.0"
+      - name: Verifier projet DuaLang 15
+        run: python3 unpacked/DuaLang_15_PROJET_COMPLET/scripts/verify_project.py
+      - name: Compiler APK DuoLang 15
+        run: gradle --no-daemon --stacktrace -p unpacked/DuaLang_15_PROJET_COMPLET :app:assembleDebug
+      - name: Confirmer APK present
+        run: test -s unpacked/DuaLang_15_PROJET_COMPLET/app/build/outputs/apk/debug/app-debug.apk
+      - name: Publier APK installable
+        uses: actions/upload-artifact@v4
+        with:
+          name: DuaLang-15-APK
+          path: unpacked/DuaLang_15_PROJET_COMPLET/app/build/outputs/apk/debug/app-debug.apk
+          if-no-files-found: error
+          retention-days: 30
